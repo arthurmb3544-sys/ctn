@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Calendar, Phone, DollarSign, Hash, User, Search, Filter, CheckCircle, XCircle, Send, CreditCard, MessageSquare, Edit2, Save, X, RefreshCw } from 'lucide-react';
-import { getTickets, getUsuarios, updateTicket, getValoresMensalidades } from '../../lib/supabase.ts';
+import { FileText, Calendar, Phone, DollarSign, Hash, User, Search, Filter, CheckCircle, XCircle, Send, CreditCard, MessageSquare, Edit2, Save, X, RefreshCw, Trash2 } from 'lucide-react';
+import { getTickets, getUsuarios, updateTicket, getValoresMensalidades, deleteTicket } from '../../lib/supabase.ts';
 import type { Usuario, ValorMensalidade } from '../../types';
 
 interface TicketWithUsuario {
@@ -44,6 +44,7 @@ export function HistoricoTickets() {
   const [editingTicket, setEditingTicket] = useState<string | null>(null);
   const [editData, setEditData] = useState<any>({});
   const [resending, setResending] = useState<{ [key: string]: boolean }>({});
+  const [deleting, setDeleting] = useState<{ [key: string]: boolean }>({});
   const [filters, setFilters] = useState<Filters>({
     search: '',
     usuario: '',
@@ -222,6 +223,21 @@ export function HistoricoTickets() {
       setError('Erro ao reenviar ticket');
     } finally {
       setResending(prev => ({ ...prev, [ticket.id]: false }));
+    }
+  };
+
+  const handleDelete = async (ticketId: string) => {
+    if (!confirm('Tem certeza que deseja apagar este ticket?')) return;
+    
+    setDeleting(prev => ({ ...prev, [ticketId]: true }));
+    try {
+      await deleteTicket(ticketId);
+      setTickets(prev => prev.filter(t => t.id !== ticketId));
+    } catch (err) {
+      console.error('Erro ao apagar ticket:', err);
+      setError('Erro ao apagar ticket');
+    } finally {
+      setDeleting(prev => ({ ...prev, [ticketId]: false }));
     }
   };
 
@@ -497,6 +513,31 @@ export function HistoricoTickets() {
                         )}
                       </div>
                     )}
+
+                    {/* Botões de ação */}
+                    <div className="flex items-center space-x-2 pt-4 border-t border-gray-200">
+                      <button
+                        onClick={() => handleEdit(ticket)}
+                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-2 rounded-lg transition-all duration-200 flex items-center space-x-1"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        <span>Editar</span>
+                      </button>
+
+                      {currentUser?.perfil === 'supervisao' && (
+                        <>
+                          <button
+                            onClick={() => handleResend(ticket)}
+                            disabled={resending[ticket.id]}
+                            className="text-green-600 hover:text-green-800 hover:bg-green-50 p-2 rounded-lg transition-all duration-200 flex items-center space-x-1 disabled:opacity-50"
+                          >
+                            {resending[ticket.id] ? (
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-4 h-4" />
+                            )}
+                            <span>Reenviar</span>
+                          </button>
                   </div>
                 ))}
               </div>
@@ -507,3 +548,19 @@ export function HistoricoTickets() {
     </div>
   );
 }
+
+                          <button
+                            onClick={() => handleDelete(ticket.id)}
+                            disabled={deleting[ticket.id]}
+                            className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-all duration-200 flex items-center space-x-1 disabled:opacity-50"
+                          >
+                            {deleting[ticket.id] ? (
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
+                            <span>Apagar</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
